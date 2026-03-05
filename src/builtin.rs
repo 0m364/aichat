@@ -156,13 +156,17 @@ pub fn run(name: &str, args: &Value) -> Result<Option<Value>> {
         }
         "command_run" => {
             let command = args["command"].as_str().ok_or_else(|| anyhow!("Missing command"))?;
-            let (cmd, args) = if cfg!(target_os = "windows") {
-                ("cmd", vec!["/C", command])
-            } else {
-                ("sh", vec!["-c", command])
-            };
-            let output = std::process::Command::new(cmd)
-                .args(args)
+            let cmd_args = shell_words::split(command)
+                .map_err(|_| anyhow!("Failed to parse command"))?;
+            if cmd_args.is_empty() {
+                return Ok(Some(json!({
+                    "stdout": "",
+                    "stderr": "No command provided",
+                    "exit_code": 1,
+                })));
+            }
+            let output = std::process::Command::new(&cmd_args[0])
+                .args(&cmd_args[1..])
                 .output()?;
 
             Ok(Some(json!({
