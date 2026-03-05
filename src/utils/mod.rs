@@ -269,4 +269,32 @@ mod tests {
         assert_eq!(estimate_token_length("hello 你好"), 4);
         assert_eq!(estimate_token_length("hello, world!"), 3);
     }
+
+    #[test]
+    fn test_fuzzy_filter() {
+        let values = vec!["abc".to_string(), "ab".to_string(), "xyz".to_string()];
+        let get = |s: &String| s.as_str();
+
+        // Empty pattern
+        assert_eq!(fuzzy_filter(values.clone(), get, ""), values);
+
+        // Exact match
+        assert_eq!(
+            fuzzy_filter(values.clone(), get, "ab"),
+            vec!["ab".to_string(), "abc".to_string()]
+        );
+
+        // Fuzzy match
+        assert_eq!(
+            fuzzy_filter(values.clone(), get, "ac"),
+            vec!["abc".to_string()]
+        );
+
+        // No match
+        assert!(fuzzy_filter(values.clone(), get, "def").is_empty());
+
+        // Empty input
+        let empty_values: Vec<String> = vec![];
+        assert!(fuzzy_filter(empty_values, get, "abc").is_empty());
+    }
 }
