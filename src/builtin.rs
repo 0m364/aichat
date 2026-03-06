@@ -98,6 +98,94 @@ pub fn declarations() -> Vec<FunctionDeclaration> {
             agent: false,
         },
         FunctionDeclaration {
+            name: "fs_stat".to_string(),
+            description: "Get metadata for a file or directory.".to_string(),
+            parameters: serde_json::from_value(json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The path to the file or directory"
+                    }
+                },
+                "required": ["path"]
+            }))
+            .unwrap(),
+            agent: false,
+        },
+        FunctionDeclaration {
+            name: "fs_file_exists".to_string(),
+            description: "Check if a file or directory exists.".to_string(),
+            parameters: serde_json::from_value(json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The path to check"
+                    }
+                },
+                "required": ["path"]
+            }))
+            .unwrap(),
+            agent: false,
+        },
+        FunctionDeclaration {
+            name: "fs_is_dir".to_string(),
+            description: "Check if a path is a directory.".to_string(),
+            parameters: serde_json::from_value(json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The path to check"
+                    }
+                },
+                "required": ["path"]
+            }))
+            .unwrap(),
+            agent: false,
+        },
+        FunctionDeclaration {
+            name: "fs_is_file".to_string(),
+            description: "Check if a path is a file.".to_string(),
+            parameters: serde_json::from_value(json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The path to check"
+                    }
+                },
+                "required": ["path"]
+            }))
+            .unwrap(),
+            agent: false,
+        },
+        FunctionDeclaration {
+            name: "fs_patch".to_string(),
+            description: "Patch a file by replacing a search block with a replace block.".to_string(),
+            parameters: serde_json::from_value(json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The path to the file to patch"
+                    },
+                    "search": {
+                        "type": "string",
+                        "description": "The block of text to search for"
+                    },
+                    "replace": {
+                        "type": "string",
+                        "description": "The block of text to replace it with"
+                    }
+                },
+                "required": ["path", "search", "replace"]
+            }))
+            .unwrap(),
+            agent: false,
+        },
+        FunctionDeclaration {
             name: "command_run".to_string(),
             description: "Run a shell command.".to_string(),
             parameters: serde_json::from_value(json!({
@@ -153,6 +241,49 @@ pub fn run(name: &str, args: &Value) -> Result<Option<Value>> {
             let mut results = vec![];
             visit_dirs(Path::new(path), text, file_pattern, &mut results)?;
             Ok(Some(json!({ "results": results })))
+        }
+        "fs_stat" => {
+            let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            if let Ok(metadata) = fs::metadata(path) {
+                let is_dir = metadata.is_dir();
+                let is_file = metadata.is_file();
+                let size = metadata.len();
+                let modified = metadata.modified()
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                    .unwrap_or(std::time::Duration::from_secs(0))
+                    .as_secs();
+                Ok(Some(json!({ "exists": true, "is_dir": is_dir, "is_file": is_file, "size": size, "modified": modified })))
+            } else {
+                Ok(Some(json!({ "exists": false })))
+            }
+        }
+        "fs_file_exists" => {
+            let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let exists = Path::new(path).exists();
+            Ok(Some(json!({ "exists": exists })))
+        }
+        "fs_is_dir" => {
+            let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let is_dir = Path::new(path).is_dir();
+            Ok(Some(json!({ "is_dir": is_dir })))
+        }
+        "fs_is_file" => {
+            let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let is_file = Path::new(path).is_file();
+            Ok(Some(json!({ "is_file": is_file })))
+        }
+        "fs_patch" => {
+            let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let search = args["search"].as_str().ok_or_else(|| anyhow!("Missing search"))?;
+            let replace = args["replace"].as_str().ok_or_else(|| anyhow!("Missing replace"))?;
+            let content = fs::read_to_string(path)?;
+            if !content.contains(search) {
+                return Ok(Some(json!({ "error": "Search string not found in file" })));
+            }
+            let new_content = content.replacen(search, replace, 1);
+            fs::write(path, new_content)?;
+            Ok(Some(json!({ "success": true })))
         }
         "command_run" => {
             let command = args["command"].as_str().ok_or_else(|| anyhow!("Missing command"))?;
