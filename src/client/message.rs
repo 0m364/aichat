@@ -61,7 +61,6 @@ pub enum MessageRole {
     Tool,
 }
 
-#[allow(dead_code)]
 impl MessageRole {
     pub fn is_system(&self) -> bool {
         matches!(self, MessageRole::System)
@@ -73,6 +72,10 @@ impl MessageRole {
 
     pub fn is_assistant(&self) -> bool {
         matches!(self, MessageRole::Assistant)
+    }
+
+    pub fn is_tool(&self) -> bool {
+        matches!(self, MessageRole::Tool)
     }
 }
 
