@@ -933,3 +933,76 @@ fn parse_tools(tools: Option<Vec<Value>>) -> Result<Option<Vec<FunctionDeclarati
     }
     Ok(Some(functions))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_parse_tools_none() {
+        let result = parse_tools(None).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_tools_valid() {
+        let tools = vec![json!({
+            "type": "function",
+            "function": {
+                "name": "test_func",
+                "description": "A test function",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        })];
+        let result = parse_tools(Some(tools)).unwrap();
+        let functions = result.unwrap();
+        assert_eq!(functions.len(), 1);
+        assert_eq!(functions[0].name, "test_func");
+    }
+
+    #[test]
+    fn test_parse_tools_invalid_type() {
+        let tools = vec![json!({
+            "type": "invalid",
+            "function": {
+                "name": "test_func",
+                "description": "A test function",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        })];
+        let result = parse_tools(Some(tools));
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Failed to parse '.tools[0]'");
+    }
+
+    #[test]
+    fn test_parse_tools_missing_function() {
+        let tools = vec![json!({
+            "type": "function"
+        })];
+        let result = parse_tools(Some(tools));
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Failed to parse '.tools[0]'");
+    }
+
+    #[test]
+    fn test_parse_tools_malformed_function() {
+        let tools = vec![json!({
+            "type": "function",
+            "function": {
+                "name": "test_func"
+                // missing description and parameters
+            }
+        })];
+        let result = parse_tools(Some(tools));
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Failed to parse '.tools[0]'");
+    }
+}
