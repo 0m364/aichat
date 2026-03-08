@@ -117,9 +117,9 @@ pub async fn openai_chat_completions_streaming(
                     format!("Tool call '{function_name}' have non-JSON arguments '{function_arguments}'")
                 })?;
                 handler.tool_call(ToolCall::new(
-                    function_name.clone(),
+                    std::mem::take(&mut function_name),
                     arguments,
-                    normalize_function_id(&function_id),
+                    normalize_function_id(std::mem::take(&mut function_id)),
                 ))?;
             }
             return Ok(true);
@@ -167,9 +167,9 @@ pub async fn openai_chat_completions_streaming(
                         format!("Tool call '{function_name}' have non-JSON arguments '{function_arguments}'")
                     })?;
                     handler.tool_call(ToolCall::new(
-                        function_name.clone(),
+                        std::mem::take(&mut function_name),
                         arguments,
-                        normalize_function_id(&function_id),
+                        normalize_function_id(std::mem::take(&mut function_id)),
                     ))?;
                 }
                 function_name.clear();
@@ -399,10 +399,10 @@ pub fn openai_extract_chat_completions(data: &Value) -> Result<ChatCompletionsOu
     Ok(output)
 }
 
-fn normalize_function_id(value: &str) -> Option<String> {
+fn normalize_function_id(value: String) -> Option<String> {
     if value.is_empty() {
         None
     } else {
-        Some(value.to_string())
+        Some(value)
     }
 }

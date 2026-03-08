@@ -236,9 +236,9 @@ async fn chat_completions_streaming(
                                             format!("Tool call '{function_name}' have non-JSON arguments '{function_arguments}'")
                                         })?;
                                         handler.tool_call(ToolCall::new(
-                                            function_name.clone(),
+                                            std::mem::take(&mut function_name),
                                             arguments,
-                                            Some(function_id.clone()),
+                                            Some(std::mem::take(&mut function_id)),
                                         ))?;
                                     }
                                     function_arguments.clear();
@@ -275,9 +275,9 @@ async fn chat_completions_streaming(
                                     format!("Tool call '{function_name}' have non-JSON arguments '{function_arguments}'")
                                 })?;
                                 handler.tool_call(ToolCall::new(
-                                    function_name.clone(),
+                                    std::mem::take(&mut function_name),
                                     arguments,
-                                    Some(function_id.clone()),
+                                    Some(std::mem::take(&mut function_id)),
                                 ))?;
                             }
                         }
