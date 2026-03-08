@@ -1,4 +1,5 @@
 use crate::function::FunctionDeclaration;
+use crate::utils::safe_join_path;
 use anyhow::{anyhow, Result};
 use serde_json::{json, Value};
 use std::fs;
@@ -208,11 +209,13 @@ pub fn run(name: &str, args: &Value) -> Result<Option<Value>> {
     match name {
         "fs_cat" => {
             let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
             let content = fs::read_to_string(path)?;
             Ok(Some(json!({ "content": content })))
         }
         "fs_ls" => {
             let path = args["path"].as_str().unwrap_or(".");
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
             let mut files = vec![];
             for entry in fs::read_dir(path)? {
                 let entry = entry?;
@@ -224,26 +227,30 @@ pub fn run(name: &str, args: &Value) -> Result<Option<Value>> {
         }
         "fs_mkdir" => {
             let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
             fs::create_dir_all(path)?;
             Ok(Some(json!({ "success": true })))
         }
         "fs_write" => {
             let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
             let contents = args["contents"].as_str().ok_or_else(|| anyhow!("Missing contents"))?;
             fs::write(path, contents)?;
             Ok(Some(json!({ "success": true })))
         }
         "fs_search" => {
             let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
             let text = args["text"].as_str().ok_or_else(|| anyhow!("Missing text"))?;
             let file_pattern = args["file_pattern"].as_str();
 
             let mut results = vec![];
-            visit_dirs(Path::new(path), text, file_pattern, &mut results)?;
+            visit_dirs(&path, text, file_pattern, &mut results)?;
             Ok(Some(json!({ "results": results })))
         }
         "fs_stat" => {
             let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
             if let Ok(metadata) = fs::metadata(path) {
                 let is_dir = metadata.is_dir();
                 let is_file = metadata.is_file();
@@ -260,24 +267,28 @@ pub fn run(name: &str, args: &Value) -> Result<Option<Value>> {
         }
         "fs_file_exists" => {
             let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
-            let exists = Path::new(path).exists();
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
+            let exists = path.exists();
             Ok(Some(json!({ "exists": exists })))
         }
         "fs_is_dir" => {
             let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
-            let is_dir = Path::new(path).is_dir();
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
+            let is_dir = path.is_dir();
             Ok(Some(json!({ "is_dir": is_dir })))
         }
         "fs_is_file" => {
             let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
-            let is_file = Path::new(path).is_file();
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
+            let is_file = path.is_file();
             Ok(Some(json!({ "is_file": is_file })))
         }
         "fs_patch" => {
             let path = args["path"].as_str().ok_or_else(|| anyhow!("Missing path"))?;
+            let path = safe_join_path(".", path).ok_or_else(|| anyhow!("Invalid path"))?;
             let search = args["search"].as_str().ok_or_else(|| anyhow!("Missing search"))?;
             let replace = args["replace"].as_str().ok_or_else(|| anyhow!("Missing replace"))?;
-            let content = fs::read_to_string(path)?;
+            let content = fs::read_to_string(&path)?;
             if !content.contains(search) {
                 return Ok(Some(json!({ "error": "Search string not found in file" })));
             }
@@ -350,4 +361,5 @@ mod tests {
         let json = result.unwrap();
         assert!(json["files"].as_array().unwrap().len() > 0);
     }
+
 }
