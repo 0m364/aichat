@@ -136,11 +136,14 @@ impl Session {
     }
 
     pub fn has_user_messages(&self) -> bool {
-        self.messages.iter().any(|v| v.role.is_user())
+        self.messages.iter().any(|v| v.role == MessageRole::User)
     }
 
     pub fn user_messages_len(&self) -> usize {
-        self.messages.iter().filter(|v| v.role.is_user()).count()
+        self.messages
+            .iter()
+            .filter(|v| v.role == MessageRole::User)
+            .count()
     }
 
     pub fn export(&self) -> Result<String> {
@@ -338,7 +341,7 @@ impl Session {
 
     pub fn compress(&mut self, mut prompt: String) {
         if let Some(system_prompt) = self.messages.first().and_then(|v| {
-            if MessageRole::System == v.role {
+            if v.role == MessageRole::System {
                 let content = v.content.to_text();
                 if !content.is_empty() {
                     return Some(content);
@@ -528,7 +531,7 @@ impl Session {
             return messages;
         } else if input.regenerate() {
             while let Some(last) = messages.last() {
-                if !last.role.is_user() {
+                if last.role != MessageRole::User {
                     messages.pop();
                 } else {
                     break;
