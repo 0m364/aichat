@@ -287,14 +287,11 @@ pub fn run(name: &str, args: &Value) -> Result<Option<Value>> {
         }
         "command_run" => {
             let command = args["command"].as_str().ok_or_else(|| anyhow!("Missing command"))?;
-            let (cmd, args) = if cfg!(target_os = "windows") {
-                ("cmd", vec!["/C", command])
-            } else {
-                ("sh", vec!["-c", command])
-            };
-            let output = std::process::Command::new(cmd)
-                .args(args)
-                .output()?;
+            let args = shell_words::split(command).map_err(|e| anyhow!("Invalid command: {}", e))?;
+            let (cmd, args) = args
+                .split_first()
+                .ok_or_else(|| anyhow!("Missing command"))?;
+            let output = std::process::Command::new(cmd).args(args).output()?;
 
             Ok(Some(json!({
                 "stdout": String::from_utf8_lossy(&output.stdout),
@@ -349,5 +346,15 @@ mod tests {
         assert!(result.is_some());
         let json = result.unwrap();
         assert!(json["files"].as_array().unwrap().len() > 0);
+    }
+
+    #[test]
+    fn test_command_run_injection() {
+        let args = json!({ "command": "echo hello; echo world" });
+        let result = run("command_run", &args).unwrap();
+        assert!(result.is_some());
+        let json = result.unwrap();
+        let stdout = json["stdout"].as_str().unwrap();
+        assert!(stdout.contains(";"));
     }
 }
