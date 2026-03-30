@@ -135,7 +135,7 @@ impl JsonSchema {
     }
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ToolCall {
     pub name: String,
     pub arguments: Value,
