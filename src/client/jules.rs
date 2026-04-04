@@ -21,6 +21,7 @@ pub struct JulesConfig {
     pub api_key: Option<String>,
     pub api_base: Option<String>,
     pub source: Option<String>,
+    pub starting_branch: Option<String>,
     #[serde(default)]
     pub models: Vec<ModelData>,
     pub patch: Option<RequestPatch>,
@@ -31,6 +32,7 @@ impl JulesClient {
     config_get_fn!(api_key, get_api_key);
     config_get_fn!(api_base, get_api_base);
     config_get_fn!(source, get_source);
+    config_get_fn!(starting_branch, get_starting_branch);
 
     pub const PROMPTS: [PromptAction<'static>; 1] = [("api_key", "API Key", None)];
 
@@ -77,6 +79,7 @@ impl Client for JulesClient {
         let api_base = self.get_api_base().unwrap_or_else(|_| API_BASE.to_string());
         let source = self.get_source()
             .map_err(|_| anyhow!("Missing 'source' in jules config. Please set it in config.yaml like `source: sources/github/owner/repo`."))?;
+        let starting_branch = self.get_starting_branch().unwrap_or_else(|_| "main".to_string());
 
         // Determine if we reuse a session or create a new one
         let session_key = input
@@ -115,7 +118,7 @@ impl Client for JulesClient {
                 "sourceContext": {
                     "source": source,
                      "githubRepoContext": {
-                        "startingBranch": "main" // TODO: Make configurable?
+                        "startingBranch": starting_branch
                     }
                 }
             });
