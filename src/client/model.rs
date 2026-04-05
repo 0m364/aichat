@@ -238,7 +238,7 @@ impl Model {
             .enumerate()
             .map(|(i, v)| match &v.content {
                 MessageContent::Text(text) => {
-                    if v.role.is_assistant() && i != messages_len - 1 {
+                    if v.role == MessageRole::Assistant && i != messages_len - 1 {
                         estimate_token_length(&strip_think_tag(text))
                     } else {
                         estimate_token_length(text)
@@ -274,7 +274,7 @@ impl Model {
         }
         let num_messages = messages.len();
         let message_tokens = self.messages_tokens(messages);
-        if messages[num_messages - 1].role.is_user() {
+        if messages[num_messages - 1].role == MessageRole::User {
             num_messages * PER_MESSAGES_TOKENS + message_tokens
         } else {
             (num_messages - 1) * PER_MESSAGES_TOKENS + message_tokens

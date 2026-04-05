@@ -61,20 +61,6 @@ pub enum MessageRole {
     Tool,
 }
 
-#[allow(dead_code)]
-impl MessageRole {
-    pub fn is_system(&self) -> bool {
-        matches!(self, MessageRole::System)
-    }
-
-    pub fn is_user(&self) -> bool {
-        matches!(self, MessageRole::User)
-    }
-
-    pub fn is_assistant(&self) -> bool {
-        matches!(self, MessageRole::Assistant)
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
@@ -206,7 +192,7 @@ pub fn patch_messages(messages: &mut Vec<Message>, model: &Model) {
         return;
     }
     if let Some(prefix) = model.system_prompt_prefix() {
-        if messages[0].role.is_system() {
+        if messages[0].role == MessageRole::System {
             messages[0].merge_system(MessageContent::Text(prefix.to_string()));
         } else {
             messages.insert(
@@ -218,7 +204,7 @@ pub fn patch_messages(messages: &mut Vec<Message>, model: &Model) {
             );
         }
     }
-    if model.no_system_message() && messages[0].role.is_system() {
+    if model.no_system_message() && messages[0].role == MessageRole::System {
         let system_message = messages.remove(0);
         if let (Some(message), system) = (messages.get_mut(0), system_message.content) {
             message.merge_system(system);
@@ -227,7 +213,7 @@ pub fn patch_messages(messages: &mut Vec<Message>, model: &Model) {
 }
 
 pub fn extract_system_message(messages: &mut Vec<Message>) -> Option<String> {
-    if messages[0].role.is_system() {
+    if messages[0].role == MessageRole::System {
         let system_message = messages.remove(0);
         return Some(system_message.content.to_text());
     }
